@@ -1,0 +1,13 @@
+construction,t_requested,t_effective,eval_ms,prove_ms,proof_bytes,verified
+Pietrzak,64,64,24.3173,34.0606,1544,true
+Wesolowski,64,64,28.1659,33.0114,256,true
+SNARK-SHA256,64,64,0.0099,0.0588,9,true
+Pietrzak,256,256,109.5490,118.5060,2056,true
+Wesolowski,256,256,102.8490,103.4185,256,true
+SNARK-SHA256,256,256,0.0238,0.0231,9,true
+Pietrzak,1024,1024,389.5164,398.8460,2568,true
+Wesolowski,1024,1024,405.4024,451.3948,256,true
+SNARK-SHA256,1024,1024,0.0926,0.0920,9,true
+Pietrzak,4096,4096,1611.8197,2158.3129,3080,true
+Wesolowski,4096,4096,1971.6691,2154.5298,256,true
+SNARK-SHA256,4096,4096,0.5184,0.3656,9,true

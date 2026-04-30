@@ -1,0 +1,12 @@
+[package]
+name    = "vdf-snark-program"
+version = "0.1.0"
+edition = "2021"
+
+# This crate is compiled for the SP1 RISC-V target and is NOT part of the
+# main workspace (see workspace exclude in root Cargo.toml).
+# Build with: cargo prove build  (requires `sp1up` toolchain)
+
+[dependencies]
+sp1-zkvm = "3"
+sha2     = { version = "0.10", default-features = false, features = ["compress"] }

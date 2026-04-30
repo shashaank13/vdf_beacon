@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "crates/vdf-core",
+    "crates/vdf-pietrzak",
+    "crates/vdf-wesolowski",
+    "crates/vdf-snark",
+    "crates/vdf-bench",
+]
+exclude = ["crates/vdf-snark/program"]
+resolver = "2"
+
+[workspace.package]
+version     = "0.1.0"
+edition     = "2021"
+authors     = ["VDF Benchmark Project"]
+license     = "MIT"
+repository  = "https://github.com/example/vdf-benchmark"
+
+# Shared dependency versions — pin once here, reference everywhere
+[workspace.dependencies]
+num-bigint = "0.4"
+num-traits = "0.2"
+sha2       = "0.10"
+
+[profile.release]
+opt-level = 3
+lto       = "thin"

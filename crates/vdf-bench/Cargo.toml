@@ -1,0 +1,14 @@
+[package]
+name    = "vdf-bench"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "vdf-bench"
+path = "src/main.rs"
+
+[dependencies]
+vdf-core        = { path = "../vdf-core" }
+vdf-pietrzak    = { path = "../vdf-pietrzak" }
+vdf-wesolowski  = { path = "../vdf-wesolowski" }
+vdf-snark       = { path = "../vdf-snark" }

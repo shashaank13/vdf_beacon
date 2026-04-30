@@ -1,0 +1,14 @@
+[package]
+name    = "vdf-snark"
+version.workspace = true
+edition.workspace = true
+
+[features]
+# Default: simulate proof generation (no zkVM toolchain required).
+default = []
+# Real SP1 proving: add sp1-sdk manually and enable this feature.
+sp1 = []
+
+[dependencies]
+vdf-core = { path = "../vdf-core" }
+sha2     = { workspace = true }

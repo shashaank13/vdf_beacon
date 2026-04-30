@@ -1,0 +1,10 @@
+[package]
+name    = "vdf-wesolowski"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+vdf-core    = { path = "../vdf-core" }
+num-bigint  = { workspace = true }
+num-traits  = { workspace = true }
+sha2        = { workspace = true }

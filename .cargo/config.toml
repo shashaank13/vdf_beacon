@@ -1,0 +1,4 @@
+# Redirect build artefacts to D: (C: is nearly full on this machine).
+# Remove or adjust this file if you move the project or free up C:.
+[build]
+target-dir = "D:\\vdf-target"
