@@ -6,9 +6,11 @@ edition.workspace = true
 [features]
 # Default: simulate proof generation (no zkVM toolchain required).
 default = []
-# Real SP1 proving: add sp1-sdk manually and enable this feature.
-sp1 = []
+# Real SP1 proving: enable this feature for production proof generation.
+sp1 = ["dep:sp1-sdk", "dep:bincode"]
 
 [dependencies]
-vdf-core = { path = "../vdf-core" }
-sha2     = { workspace = true }
+vdf-core  = { path = "../vdf-core" }
+sha2      = { workspace = true }
+sp1-sdk   = { version = "3", optional = true }
+bincode   = { version = "1", optional = true }

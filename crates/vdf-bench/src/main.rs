@@ -104,7 +104,8 @@ fn main() {
                 .filter_map(|v| v.trim().parse().ok())
                 .collect()
         })
-        .unwrap_or_else(|| vec![64, 256, 1024, 4096]);
+        .unwrap_or_else(|| vec![64, 256, 1024, 4096, 16384, 65536]);
+
 
     let lambda: usize = env::var("LAMBDA")
         .ok()

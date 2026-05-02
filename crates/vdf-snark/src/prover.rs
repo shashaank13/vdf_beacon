@@ -16,7 +16,7 @@
 //! cd crates/vdf-snark/program && cargo prove build
 //!
 //! # 3. Set the path and run with real proving
-//! export SNARK_ELF_PATH=crates/vdf-snark/program/elf/riscv32im-succinct-zkvm-elf
+//! export SNARK_ELF_PATH=target/elf-compilation/riscv32im-succinct-zkvm-elf/release/vdf-snark-program
 //! cargo run --release -p vdf-bench --features vdf-snark/sp1
 //! ```
 
@@ -69,7 +69,7 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
         .unwrap_or_else(|_| panic!("Could not read SP1 ELF from {elf_path}"));
 
     let mut stdin = SP1Stdin::new();
-    stdin.write(x);
+    stdin.write(&x.to_vec());
     stdin.write(&t);
 
     let client = ProverClient::new();
@@ -80,7 +80,7 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
     let start = Instant::now();
     let proof = client
         .prove(&pk, stdin)
-        .groth16()
+        .compressed()
         .run()
         .expect("SP1 proving failed");
     let elapsed = start.elapsed();
