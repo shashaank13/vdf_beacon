@@ -50,21 +50,75 @@ vdf-benchmark/
 
 † Naive recursive implementation; optimised to O(√T) with checkpointing.
 
-## SP1 Guest Program
+## Run In SP1 Mode
 
-The `crates/vdf-snark/program/` directory contains the RISC-V guest that runs
-inside SP1.  It is **excluded from the main workspace** and must be built
-separately with the SP1 toolchain:
+The guest program in `crates/vdf-snark/program/` runs inside SP1 zkVM.
+That crate is excluded from the root workspace, so build it separately.
+
+### 1) Build The SP1 Guest ELF
 
 ```bash
 cd crates/vdf-snark/program
-cargo prove build   # requires `sp1up` toolchain
+cargo prove build
 ```
 
-Set the `SNARK_ELF_PATH` environment variable to the compiled ELF before
-running the bench with the `sp1` feature:
+Notes:
+- Requires SP1 toolchain (`sp1up`).
+- The guest uses an SP1-patched `sha2` dependency so SHA-256 runs through the
+  SP1 precompile path.
+
+### 2) Set SNARK_ELF_PATH To The ELF File (Not A Directory)
+
+From repo root, point `SNARK_ELF_PATH` to the built binary file:
 
 ```bash
-SNARK_ELF_PATH=crates/vdf-snark/program/elf/riscv32im-succinct-zkvm-elf \
-  cargo run --release -p vdf-bench --features vdf-snark/sp1
+export SNARK_ELF_PATH=target/elf-compilation/riscv32im-succinct-zkvm-elf/release/vdf-snark-program
+```
+
+Quick validation:
+
+```bash
+ls -lh "$SNARK_ELF_PATH"
+```
+
+If this fails, rebuild the guest (step 1) and re-check the path.
+
+### 3) Run Bench In SP1 Mode
+
+```bash
+cargo run --release -p vdf-bench --features vdf-snark/sp1
+```
+
+Optional quick smoke test:
+
+```bash
+T_VALUES=10 cargo run --release -p vdf-bench --features vdf-snark/sp1
+```
+
+### 4) Optional Proof Mode Selection
+
+`vdf-snark` supports selecting SP1 proof type using `SP1_PROOF_MODE`:
+
+```bash
+SP1_PROOF_MODE=groth16 \
+cargo run --release -p vdf-bench --features vdf-snark/sp1
+```
+
+Supported values:
+- `core`
+- `compressed` (default)
+- `plonk`
+- `groth16`
+
+### ELF Handling Tips
+
+- Keep `SNARK_ELF_PATH` as an absolute or repo-root-relative file path.
+- Do not set `SNARK_ELF_PATH` to `.../riscv32im-succinct-zkvm-elf` (directory).
+- Rebuild guest ELF after any change under `crates/vdf-snark/program/`.
+- If multiple ELF targets exist, use the `riscv32im-succinct-zkvm-elf/release/vdf-snark-program`
+  file unless you intentionally built another target.
+- To locate candidate ELF files:
+
+```bash
+find target/elf-compilation -type f | rg 'vdf-snark-program|riscv32im-succinct-zkvm-elf'
 ```
