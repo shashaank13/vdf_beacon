@@ -34,10 +34,10 @@ struct BenchRecord {
     t_requested: u64,
     /// Effective delay (may differ for Pietrzak due to power-of-two rounding).
     t_effective: u64,
-    /// Wall-clock evaluation time in milliseconds.
-    eval_ms: f64,
-    /// Wall-clock proof-generation time in milliseconds.
-    prove_ms: f64,
+    /// Wall-clock evaluation time in seconds.
+    eval_s: f64,
+    /// Wall-clock proof-generation time in seconds.
+    prove_s: f64,
     /// Proof size in bytes.
     proof_bytes: usize,
     /// Whether the verifier accepted the proof.
@@ -47,12 +47,12 @@ struct BenchRecord {
 impl BenchRecord {
     fn to_csv_row(&self) -> String {
         format!(
-            "{},{},{},{:.4},{:.4},{},{}\n",
+            "{},{},{},{:.6},{:.6},{},{}\n",
             self.construction,
             self.t_requested,
             self.t_effective,
-            self.eval_ms,
-            self.prove_ms,
+            self.eval_s,
+            self.prove_s,
             self.proof_bytes,
             self.verified,
         )
@@ -61,8 +61,8 @@ impl BenchRecord {
 
 // ── Benchmark runner ──────────────────────────────────────────────────────────
 
-fn dur_ms(d: Duration) -> f64 {
-    d.as_secs_f64() * 1_000.0
+fn dur_s(d: Duration) -> f64 {
+    d.as_secs_f64()
 }
 
 /// Run one VDF construction and return a populated [`BenchRecord`].
@@ -86,8 +86,8 @@ fn bench_one<V: VDF>(name: &str, params: &VDFParams, x: &[u8]) -> BenchRecord {
         construction: name.to_string(),
         t_requested: params.t,
         t_effective,
-        eval_ms: dur_ms(eval_time),
-        prove_ms: dur_ms(prove_time),
+        eval_s: dur_s(eval_time),
+        prove_s: dur_s(prove_time),
         proof_bytes: out.proof.len(),
         verified,
     }
@@ -104,7 +104,13 @@ fn main() {
                 .filter_map(|v| v.trim().parse().ok())
                 .collect()
         })
-        .unwrap_or_else(|| vec![64, 256, 1024, 4096, 16384, 65536]);
+        .unwrap_or_else(|| vec![
+            1u64 << 10,  // 2^10  =     1,024
+            1u64 << 13,  // 2^13  =     8,192
+            1u64 << 15,  // 2^15  =    32,768
+            1u64 << 18,  // 2^18  =   262,144
+            1u64 << 20,  // 2^20  = 1,048,576
+        ]);
 
 
     let lambda: usize = env::var("LAMBDA")
@@ -131,8 +137,8 @@ fn main() {
         print!("  Pietrzak   ");
         let rec = bench_one::<PietrzakVDF>("Pietrzak", &params, x);
         println!(
-            "eval={:.1}ms  prove={:.1}ms  proof={}B  ok={}",
-            rec.eval_ms, rec.prove_ms, rec.proof_bytes, rec.verified
+            "eval={:.3}s  prove={:.3}s  proof={}B  ok={}",
+            rec.eval_s, rec.prove_s, rec.proof_bytes, rec.verified
         );
         records.push(rec);
 
@@ -140,8 +146,8 @@ fn main() {
         print!("  Wesolowski ");
         let rec = bench_one::<WesolowskiVDF>("Wesolowski", &params, x);
         println!(
-            "eval={:.1}ms  prove={:.1}ms  proof={}B  ok={}",
-            rec.eval_ms, rec.prove_ms, rec.proof_bytes, rec.verified
+            "eval={:.3}s  prove={:.3}s  proof={}B  ok={}",
+            rec.eval_s, rec.prove_s, rec.proof_bytes, rec.verified
         );
         records.push(rec);
 
@@ -149,8 +155,8 @@ fn main() {
         print!("  SNARK-SHA  ");
         let rec = bench_one::<SnarkVDF>("SNARK-SHA256", &params, x);
         println!(
-            "eval={:.1}ms  prove={:.1}ms  proof={}B  ok={}",
-            rec.eval_ms, rec.prove_ms, rec.proof_bytes, rec.verified
+            "eval={:.3}s  prove={:.3}s  proof={}B  ok={}",
+            rec.eval_s, rec.prove_s, rec.proof_bytes, rec.verified
         );
         records.push(rec);
     }
@@ -163,7 +169,7 @@ fn main() {
     let csv_path = out_dir.join("bench.csv");
     let mut file = fs::File::create(&csv_path).expect("failed to open CSV file");
     // Header
-    writeln!(file, "construction,t_requested,t_effective,eval_ms,prove_ms,proof_bytes,verified")
+    writeln!(file, "construction,t_requested,t_effective,eval_s,prove_s,proof_bytes,verified")
         .expect("CSV write failed");
     for rec in &records {
         file.write_all(rec.to_csv_row().as_bytes()).expect("CSV write failed");

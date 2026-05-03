@@ -2,7 +2,7 @@
 //!
 //! * **Evaluation** `O(T)` squarings.
 //! * **Proof size**  `O(1)` — exactly one group element.
-//! * **Proving**     `O(T)` group ops (binary long-division loop).
+//! * **Proving**     `O(T)` group ops (combined eval+prove single pass).
 //! * **Verification** `O(1)` — two modular exponentiations with short exponents.
 
 mod eval;
@@ -62,6 +62,26 @@ impl VDF for WesolowskiVDF {
     }
 }
 
+impl WesolowskiVDF {
+    /// Evaluate `y = x^(2^T)` **and** build the Wesolowski proof `π` in a
+    /// **single pass** of `T` squarings.
+    ///
+    /// Prefer this over calling [`eval`][Self::eval] followed by
+    /// [`prove`][Self::prove] when both outputs are needed, since the combined
+    /// pass halves the total number of group squarings.
+    pub fn eval_and_prove(&self, x: &[u8]) -> (VDFOutput, Duration) {
+        let x_elem = self.group.hash_to_element(x);
+        let start = Instant::now();
+        let (y_elem, pi) = prove::eval_and_prove(&self.group, &x_elem, self.t);
+        let elapsed = start.elapsed();
+        let out = VDFOutput {
+            y: vdf_core::biguint_to_bytes(&y_elem, 256),
+            proof: prove::encode_proof(&pi),
+        };
+        (out, elapsed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,5 +101,16 @@ mod tests {
         let (y, _) = vdf.eval(b"correct-input");
         let (out, _) = vdf.prove(b"correct-input", &y);
         assert!(!vdf.verify(b"wrong-input", &out));
+    }
+
+    #[test]
+    fn eval_and_prove_matches_separate() {
+        let vdf = WesolowskiVDF::setup(&VDFParams { t: 16, lambda: 2048 });
+        let x = b"combined-test";
+        let (combined_out, _) = vdf.eval_and_prove(x);
+        assert!(vdf.verify(x, &combined_out));
+        // Output y must match independent eval.
+        let (y, _) = vdf.eval(x);
+        assert_eq!(combined_out.y, y);
     }
 }
