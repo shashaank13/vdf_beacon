@@ -11,6 +11,9 @@ sp1 = ["dep:sp1-sdk", "dep:bincode"]
 
 [dependencies]
 vdf-core  = { path = "../vdf-core" }
-sha2      = { workspace = true }
+light-poseidon-nostd = "0.4.1"
+ark-bn254 = "0.5"
+ark-ff = "0.5"
+sha2 = "0.10"
 sp1-sdk   = { version = "3", optional = true }
 bincode   = { version = "1", optional = true }

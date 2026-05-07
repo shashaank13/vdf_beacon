@@ -22,7 +22,7 @@ use std::{
 use vdf_core::{VDF, VDFParams};
 use vdf_pietrzak::PietrzakVDF;
 use vdf_wesolowski::WesolowskiVDF;
-use vdf_snark::SnarkVDF;
+use vdf_snark::{SnarkPoseidonVDF, SnarkSha256VDF};
 
 // ── Record type ───────────────────────────────────────────────────────────────
 
@@ -63,6 +63,14 @@ impl BenchRecord {
 
 fn dur_s(d: Duration) -> f64 {
     d.as_secs_f64()
+}
+
+fn ratio(a: f64, b: f64) -> f64 {
+    if b == 0.0 {
+        f64::INFINITY
+    } else {
+        a / b
+    }
 }
 
 /// Run one VDF construction and return a populated [`BenchRecord`].
@@ -151,14 +159,40 @@ fn main() {
         );
         records.push(rec);
 
-        // Hash+SNARK
+        // SNARK-SHA256
         print!("  SNARK-SHA  ");
-        let rec = bench_one::<SnarkVDF>("SNARK-SHA256", &params, x);
+        let rec_sha = bench_one::<SnarkSha256VDF>("SNARK-SHA256", &params, x);
         println!(
             "eval={:.3}s  prove={:.3}s  proof={}B  ok={}",
-            rec.eval_s, rec.prove_s, rec.proof_bytes, rec.verified
+            rec_sha.eval_s, rec_sha.prove_s, rec_sha.proof_bytes, rec_sha.verified
         );
-        records.push(rec);
+        records.push(rec_sha);
+
+        // SNARK-Poseidon
+        print!("  SNARK-POS  ");
+        let rec_pos = bench_one::<SnarkPoseidonVDF>("SNARK-Poseidon", &params, x);
+        println!(
+            "eval={:.3}s  prove={:.3}s  proof={}B  ok={}",
+            rec_pos.eval_s, rec_pos.prove_s, rec_pos.proof_bytes, rec_pos.verified
+        );
+        records.push(rec_pos);
+
+        let sha = records
+            .iter()
+            .rev()
+            .find(|r| r.construction == "SNARK-SHA256" && r.t_requested == t)
+            .expect("missing SNARK-SHA256 record");
+        let pos = records
+            .iter()
+            .rev()
+            .find(|r| r.construction == "SNARK-Poseidon" && r.t_requested == t)
+            .expect("missing SNARK-Poseidon record");
+
+        println!(
+            "  SNARK cmp  eval: sha/pos={:.3}x  prove: sha/pos={:.3}x",
+            ratio(sha.eval_s, pos.eval_s),
+            ratio(sha.prove_s, pos.prove_s)
+        );
     }
 
     println!();

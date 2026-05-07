@@ -29,6 +29,7 @@ use std::sync::{Mutex, OnceLock};
 use sp1_sdk::{SP1ProvingKey, SP1VerifyingKey};
 
 use vdf_core::{VDFOutput};
+use crate::hash_chain::{hash_chain_with, verify_hash_chain_with, HashFunction};
 
 
 #[cfg(feature = "sp1")]
@@ -66,12 +67,12 @@ fn cached_setup(
 ///
 /// Runs the hash chain a second time (so the "prove" timing matches the
 /// sequentiality cost) and writes `b"SIMULATED"` as the proof payload.
-pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
-    let y = hash_chain(x, t);
+pub fn prove(x: &[u8], t: u64, hash_fn: HashFunction) -> (VDFOutput, Duration) {
+    let y = hash_chain_with(hash_fn, x, t);
     let start = Instant::now();
     // Simulate prover work: re-run the hash chain (this mirrors what the
     // zkVM guest would execute, minus the SNARK overhead).
-    let _ = hash_chain(x, t);
+    let _ = hash_chain_with(hash_fn, x, t);
     let elapsed = start.elapsed();
     let out = VDFOutput {
         y,
@@ -82,8 +83,8 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
 
 #[cfg(not(feature = "sp1"))]
 /// Verify in simulate mode: re-run the hash chain.
-pub fn verify(x: &[u8], out: &VDFOutput, t: u64) -> bool {
-    out.proof == b"SIMULATED" && crate::hash_chain::verify_hash_chain(x, &out.y, t)
+pub fn verify(x: &[u8], out: &VDFOutput, t: u64, hash_fn: HashFunction) -> bool {
+    out.proof == b"SIMULATED" && verify_hash_chain_with(hash_fn, x, &out.y, t)
 }
 
 // ── SP1 mode ──────────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ pub fn verify(x: &[u8], out: &VDFOutput, t: u64) -> bool {
 ///
 // The guest ELF path is read from the `SNARK_ELF_PATH` environment variable
 /// (set it to the compiled RISC-V binary produced by `cargo prove build`).
-pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
+pub fn prove(x: &[u8], t: u64, hash_fn: HashFunction) -> (VDFOutput, Duration) {
     use sp1_sdk::{ProverClient, SP1Stdin};
 
     let total_start = Instant::now();
@@ -113,6 +114,11 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
     let mut stdin = SP1Stdin::new();
     stdin.write(&x.to_vec());
     stdin.write(&t);
+    let hash_selector: u8 = match hash_fn {
+        HashFunction::Sha256 => 0,
+        HashFunction::Poseidon => 1,
+    };
+    stdin.write(&hash_selector);
 
     eprintln!("[sp1] initializing prover client");
     let client = ProverClient::new();
@@ -161,8 +167,9 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
     let mut public_values = proof.public_values.clone();
     let proof_x: Vec<u8> = public_values.read();
     let proof_t: u64 = public_values.read();
+    let proof_hash_selector: u8 = public_values.read();
     let y: Vec<u8> = public_values.read();
-    if proof_x != x || proof_t != t {
+    if proof_x != x || proof_t != t || proof_hash_selector != hash_selector {
         panic!("SP1 public values mismatch between host inputs and guest outputs");
     }
 
@@ -188,7 +195,7 @@ pub fn prove(x: &[u8], t: u64) -> (VDFOutput, Duration) {
 
 #[cfg(feature = "sp1")]
 /// Verify an SP1 proof.
-pub fn verify(x: &[u8], out: &VDFOutput, _t: u64) -> bool {
+pub fn verify(x: &[u8], out: &VDFOutput, _t: u64, hash_fn: HashFunction) -> bool {
     use sp1_sdk::{ProverClient, SP1VerifyingKey, SP1ProofWithPublicValues};
 
     if out.proof.len() < 8 {
@@ -207,8 +214,17 @@ pub fn verify(x: &[u8], out: &VDFOutput, _t: u64) -> bool {
     let mut public_values = proof.public_values.clone();
     let proof_x: Vec<u8> = public_values.read();
     let proof_t: u64 = public_values.read();
+    let proof_hash_selector: u8 = public_values.read();
     let proof_y: Vec<u8> = public_values.read();
-    if proof_x != x || proof_t != _t || proof_y != out.y {
+    let expected_hash_selector: u8 = match hash_fn {
+        HashFunction::Sha256 => 0,
+        HashFunction::Poseidon => 1,
+    };
+    if proof_x != x
+        || proof_t != _t
+        || proof_hash_selector != expected_hash_selector
+        || proof_y != out.y
+    {
         return false;
     }
 

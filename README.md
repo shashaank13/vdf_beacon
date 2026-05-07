@@ -6,7 +6,7 @@ Benchmarks three Verifiable Delay Function constructions side-by-side:
 |-------|-------------|-----------|
 | `vdf-pietrzak`   | Recursive-halving proof (2018/623) | Pietrzak |
 | `vdf-wesolowski` | Single-element proof   (2018/627) | Wesolowski |
-| `vdf-snark`      | Iterated SHA-256 + zkVM proof      | SP1/Jolt  |
+| `vdf-snark`      | Iterated SHA-256 or Poseidon + zkVM proof | SP1/Jolt  |
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ vdf-benchmark/
 | Metric           | Pietrzak         | Wesolowski      | Hash + SNARK          |
 |------------------|------------------|-----------------|-----------------------|
 | Eval             | O(T) squarings   | O(T) squarings  | O(T) hashes           |
-| Prove            | O(T) group ops†  | O(T) group ops  | zkVM overhead (~10⁴×) |
+| Prove            | O(T) group ops†  | O(T) group ops  | zkVM overhead (~10⁴×), hash-dependent |
 | Proof size       | O(log T) elems   | O(1) — 1 elem   | ~100–300 KB           |
 | Verify           | O(log T)         | O(1) — 2 mults  | SNARK verify (~ms)    |
 | Trusted setup    | None             | None            | Backend-dependent     |
